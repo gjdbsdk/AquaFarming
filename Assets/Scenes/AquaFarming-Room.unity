@@ -2681,7 +2681,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0dbc211f970256144880de282bb91826, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PBRController
-  walkSpeed: 3
+  walkSpeed: 1.5
   gravity: 20
 --- !u!143 &2090899730
 CharacterController:
