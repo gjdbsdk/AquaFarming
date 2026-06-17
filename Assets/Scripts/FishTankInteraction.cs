@@ -9,9 +9,9 @@ public class FishTankInteraction : MonoBehaviour
 
     void Update()
     {
-        if (isPlayerNearby && Input.GetKeyDown(KeyCode.Return))
+        if (isPlayerNearby && Input.GetButtonDown("Submit"))
         {
-            SceneManager.LoadScene("AquaFarming-FishTank"); 
+            SceneManager.LoadScene("AquaFarming-Title"); 
         }
     }
 
@@ -42,7 +42,7 @@ public class FishTankInteraction : MonoBehaviour
 
             Rect rect = new Rect(sw / 2 - 300, sh / 2 - 50, 600, 100);
             
-            GUI.Label(rect, "Press Enter to Feed Fishes", "Message");
+            GUI.Label(rect, "Press [ ENTER ] to Feed Fishes", "RoomBigMessage");
         }
     }
 }

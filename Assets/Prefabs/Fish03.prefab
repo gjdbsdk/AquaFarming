@@ -102,7 +102,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -124,6 +124,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FishMovement
   changeDirectionTime: 1.5
   isFull: 0
+  minZ: -0.068
+  maxZ: 0.485
+  minY: 0.684
+  maxY: 0.803
 --- !u!54 &1476931704829085500
 Rigidbody:
   m_ObjectHideFlags: 0

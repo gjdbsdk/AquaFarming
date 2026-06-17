@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/AquaFarming-Room.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
+    path: Assets/Scenes/AquaFarming-Title.unity
+    guid: 20df9693b0f62454c8fb6929d46837a8
+  - enabled: 1
     path: Assets/Scenes/AquaFarming-FishTank.unity
     guid: 010f53a713506f44380432b0023fb30f
   m_configObjects:

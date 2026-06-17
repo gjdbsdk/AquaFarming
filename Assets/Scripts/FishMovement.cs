@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class FishMovement : MonoBehaviour
@@ -20,75 +21,82 @@ public class FishMovement : MonoBehaviour
     private float hungerTimer = 0f;
     public bool isFull = false;
 
-    [Header("--- 🚨 오염 사망 타이머 (밥먹기와 완전히 독립!) ---")]
+    [Header("--- 🚨 오염 사망 타이머 ---")]
     private float dirtyWaterTimer = 0f;
 
-    private Renderer[] fishRenderers;
+    [Header("--- 🚨 [수정] 어항 벽 절대 범위 좌표 (월드 좌표 기준) ---")]
+    public float minZ = -0.068f;
+    public float maxZ= 0.485f;
+    public float minY = 0.684f;
+    public float maxY = 0.803f;
+
+    private List<Material> cachedMaterials = new List<Material>();
     private Color[] originalColors;
+
+    private bool isIdling = false; 
+    private float bugCheckTimer = 0f;
+    private bool isWaterCompletelyDirty = false;
 
     void Start()
     {
         originalScale = transform.localScale;
-        fishRenderers = GetComponentsInChildren<Renderer>();
+        Renderer[] fishRenderers = GetComponentsInChildren<Renderer>();
 
         if (fishRenderers != null)
         {
-            int totalMaterialCount = 0;
-            foreach (Renderer r in fishRenderers)
-            {
-                if (r != null) totalMaterialCount += r.materials.Length;
-            }
-
-            originalColors = new Color[totalMaterialCount];
-
-            int index = 0;
             foreach (Renderer r in fishRenderers)
             {
                 if (r != null)
                 {
                     foreach (Material mat in r.materials)
                     {
-                        if (mat != null)
-                        {
-                            originalColors[index] = mat.color; 
-                            index++;
-                        }
+                        if (mat != null) cachedMaterials.Add(mat);
                     }
                 }
             }
+
+            originalColors = new Color[cachedMaterials.Count];
+            for (int i = 0; i < cachedMaterials.Count; i++)
+            {
+                originalColors[i] = cachedMaterials[i].color;
+            }
         }
 
-        ChangeRandomDirection();
+        isIdling = true;
+        changeDirectionTime = Random.Range(1.5f, 3.5f);
+        currentSpeedY = 0f;
+        currentSpeedZ = 0f;
+        directionTimer = 0f;
     }
 
     void Update()
     {
-        // 1. 이동 처리
-        Vector3 movement = new Vector3(0f, currentSpeedY * Time.deltaTime, currentSpeedZ * Time.deltaTime);
-        transform.Translate(movement);
+        if (!isIdling)
+        {
+            Vector3 movement = new Vector3(0f, currentSpeedY * Time.deltaTime, currentSpeedZ * Time.deltaTime);
+            transform.Translate(movement);
+        }
 
-        // 2. 3초 방향 전환 타이머
+        KeepInsideTank();
+
         directionTimer += Time.deltaTime;
         if (directionTimer >= changeDirectionTime)
         {
-            ChangeRandomDirection();
+            DecideNextAction();
             directionTimer = 0f; 
         }
 
-
-        // =======================================================================
-        // 🚨 [핵심 수정] 파트 A: 오염 사망 시스템 (밥과 100% 무관하게 상시 감시)
-        // =======================================================================
-        bool isWaterCompletelyDirty = false;
-        GameObject bug = GameObject.FindWithTag("Bug");
-        
-        if (bug != null)
+        bugCheckTimer += Time.deltaTime;
+        if (bugCheckTimer >= 0.2f) 
         {
-            WaterBug bugScript = bug.GetComponent<WaterBug>();
-            if (bugScript != null)
+            bugCheckTimer = 0f;
+            isWaterCompletelyDirty = false;
+            GameObject bug = GameObject.FindWithTag("Bug");
+            
+            if (bug != null)
             {
-                // 물벌레 방치 5초 경과 = 물 오염 확정
-                if (bugScript.GetLifeTime() >= 5.0f)
+                WaterBug bugScript = bug.GetComponent<WaterBug>();
+                if (bugScript != null && bugScript.GetLifeTime() >= 5.0f)
                 {
                     isWaterCompletelyDirty = true;
                 }
@@ -99,22 +107,19 @@ public class FishMovement : MonoBehaviour
         {
             dirtyWaterTimer += Time.deltaTime;
 
-            // 크기 변화 없이 5초 동안 빨개짐
             if (dirtyWaterTimer < 5.0f)
             {
                 float dirtyLerpPercent = dirtyWaterTimer / 5.0f;
                 ChangeFishColorLerp(Color.red, dirtyLerpPercent);
             }
-            // 5초 지나면 사망!
             else
             {
                 Destroy(gameObject);
-                return; // 파괴되었으므로 이번 프레임 Update 종료
+                return;
             }
         }
         else
         {
-            // 벌레를 잡아서 물이 다시 맑아졌다면 오염 타이머를 부드럽게 리셋
             if (dirtyWaterTimer > 0f)
             {
                 dirtyWaterTimer = 0f;
@@ -122,10 +127,6 @@ public class FishMovement : MonoBehaviour
             }
         }
 
-
-        // =======================================================================
-        // 🚨 [핵심 수정] 파트 B: 일반 소화 및 공복 타이머 (물이 맑을 때만 정상 작동)
-        // =======================================================================
         if (!isWaterCompletelyDirty)
         {
             if (isEnlarged)
@@ -166,19 +167,71 @@ public class FishMovement : MonoBehaviour
         }
         else
         {
-            // 물이 오염된 동안에는 일반 공복/소화 타이머가 흘러가지 않고 멈춥니다.
-            // (오염 사망 타이머가 우선권을 가집니다)
             hungerTimer = 0f;
             customTimer = 0f;
         }
     }
 
+    void KeepInsideTank()
+    {
+        Vector3 currentPos = transform.position;
+        bool isHitWall = false;
+
+        if (currentPos.z < minZ)
+        {
+            currentPos.z = minZ;
+            currentSpeedZ = Mathf.Abs(currentSpeedZ) > 0.001f ? Mathf.Abs(currentSpeedZ) : 0.1f;
+            isHitWall = true;
+        }
+        else if (currentPos.z > maxZ)
+        {
+            currentPos.z = maxZ;
+            currentSpeedZ = Mathf.Abs(currentSpeedZ) > 0.001f ? -Mathf.Abs(currentSpeedZ) : -0.1f;
+            isHitWall = true;
+        }
+
+        if (currentPos.y < minY)
+        {
+            currentPos.y = minY;
+            currentSpeedY = Mathf.Abs(currentSpeedY) > 0.001f ? Mathf.Abs(currentSpeedY) : 0.04f;
+            isHitWall = true;
+        }
+        else if (currentPos.y > maxY)
+        {
+            currentPos.y = maxY;
+            currentSpeedY = Mathf.Abs(currentSpeedY) > 0.001f ? -Mathf.Abs(currentSpeedY) : -0.04f;
+            isHitWall = true;
+        }
+
+        transform.position = currentPos;
+
+        if (isHitWall)
+        {
+            ApplyScale();
+        }
+    }
+
+
+    void DecideNextAction()
+    {
+        isIdling = Random.Range(0, 2) == 0;
+
+        if (isIdling)
+        {
+            changeDirectionTime = Random.Range(1.5f, 3.5f);
+            currentSpeedY = 0f;
+            currentSpeedZ = 0f;
+        }
+        else
+        {
+            changeDirectionTime = Random.Range(2.5f, 4.5f);
+            ChangeRandomDirection();
+        }
+    }
+
     public void EatFood()
     {
-        if (foodEatenCount >= 5)
-        {
-            return; 
-        }
+        if (foodEatenCount >= 5) return; 
 
         foodEatenCount += 1;
         sizeModifier *= 1.1f;
@@ -188,8 +241,6 @@ public class FishMovement : MonoBehaviour
         customTimer = 0f; 
         hungerTimer = 0f; 
 
-        // 🚨 단, 물이 오염된 상태라면 먹어도 원래 색으로 돌아가지 않고 오염 필터 색을 유지해야 하므로
-        // 물이 깨끗할 때만 색상을 초기화해 줍니다.
         GameObject bug = GameObject.FindWithTag("Bug");
         bool isDirty = false;
         if (bug != null)
@@ -198,31 +249,20 @@ public class FishMovement : MonoBehaviour
             if (bugScript != null && bugScript.GetLifeTime() >= 5.0f) isDirty = true;
         }
 
-        if (!isDirty)
-        {
-            ResetToOriginalColor();
-        }
+        if (!isDirty) ResetToOriginalColor();
 
         ApplyScale();
     }
 
     void ChangeFishColorLerp(Color targetColor, float percent)
     {
-        if (fishRenderers != null && originalColors != null)
+        if (cachedMaterials != null && originalColors != null)
         {
-            int index = 0;
-            foreach (Renderer r in fishRenderers)
+            for (int i = 0; i < cachedMaterials.Count; i++)
             {
-                if (r != null)
+                if (cachedMaterials[i] != null)
                 {
-                    foreach (Material mat in r.materials)
-                    {
-                        if (mat != null)
-                        {
-                            mat.color = Color.Lerp(originalColors[index], targetColor, percent);
-                            index++;
-                        }
-                    }
+                    cachedMaterials[i].color = Color.Lerp(originalColors[i], targetColor, percent);
                 }
             }
         }
@@ -230,21 +270,13 @@ public class FishMovement : MonoBehaviour
 
     void ResetToOriginalColor()
     {
-        if (fishRenderers != null && originalColors != null)
+        if (cachedMaterials != null && originalColors != null)
         {
-            int index = 0;
-            foreach (Renderer r in fishRenderers)
+            for (int i = 0; i < cachedMaterials.Count; i++)
             {
-                if (r != null)
+                if (cachedMaterials[i] != null)
                 {
-                    foreach (Material mat in r.materials)
-                    {
-                        if (mat != null)
-                        {
-                            mat.color = originalColors[index]; 
-                            index++;
-                        }
-                    }
+                    cachedMaterials[i].color = originalColors[i];
                 }
             }
         }
@@ -252,7 +284,16 @@ public class FishMovement : MonoBehaviour
 
     void ApplyScale()
     {
-        float directionSign = (currentSpeedZ < 0) ? 1.0f : -1.0f;
+        float directionSign = -1.0f; 
+
+        if (Mathf.Abs(currentSpeedZ) > 0.001f)
+        {
+            directionSign = (currentSpeedZ < 0) ? 1.0f : -1.0f;
+        }
+        else
+        {
+            directionSign = (transform.localScale.z < 0f) ? -1.0f : 1.0f;
+        }
 
         float finalX = originalScale.x * sizeModifier;
         float finalY = originalScale.y * sizeModifier;
