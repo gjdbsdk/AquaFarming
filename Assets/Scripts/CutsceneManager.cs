@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class CutsceneSceneChanger : MonoBehaviour
+public class Cutscenemanager : MonoBehaviour
 {
     void Update()
     {
