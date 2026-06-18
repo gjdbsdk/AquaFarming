@@ -6,6 +6,12 @@ public class FishTankInteraction : MonoBehaviour
     public GUISkin skin; 
     
     private bool isPlayerNearby = false; 
+    private AudioSource audioSource; 
+
+    void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
+    }
 
     void Update()
     {
@@ -20,6 +26,11 @@ public class FishTankInteraction : MonoBehaviour
         if (other.GetComponent<CharacterController>() != null)
         {
             isPlayerNearby = true; 
+
+            if (audioSource != null)
+            {
+                audioSource.Play();
+            }
         }
     }
 
@@ -28,6 +39,11 @@ public class FishTankInteraction : MonoBehaviour
         if (other.GetComponent<CharacterController>() != null)
         {
             isPlayerNearby = false; 
+
+            if (audioSource != null)
+            {
+                audioSource.Stop();
+            }
         }
     }
 

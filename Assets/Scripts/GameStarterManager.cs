@@ -6,8 +6,18 @@ public class GameStartManager : MonoBehaviour
 {
     public GUISkin skin; 
 
+    public AudioClip beepSound;  
+    public AudioClip startSound; 
+
     private bool isCountingDown = false;
     private string countdownText = "";    
+    
+    private AudioSource audioSource;
+
+    void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
+    }
 
     void Update()
     {
@@ -30,18 +40,31 @@ public class GameStartManager : MonoBehaviour
         isCountingDown = true;
 
         countdownText = "3";
+        PlaySound(beepSound); 
         yield return new WaitForSeconds(1.0f);
 
         countdownText = "2";
+        PlaySound(beepSound); 
         yield return new WaitForSeconds(1.0f);
 
         countdownText = "1";
+        PlaySound(beepSound); 
         yield return new WaitForSeconds(1.0f);
 
         countdownText = "START!";
+        PlaySound(startSound); 
         yield return new WaitForSeconds(0.8f);
 
         SceneManager.LoadScene("AquaFarming-FishTank");
+    }
+
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.clip = clip; 
+            audioSource.Play();      
+        }
     }
 
     private void OnGUI()

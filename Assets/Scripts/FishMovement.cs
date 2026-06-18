@@ -11,20 +11,16 @@ public class FishMovement : MonoBehaviour
 
     private Vector3 originalScale;
 
-    [Header("--- 물고기 크기 및 식사 제한 ---")]
     private float sizeModifier = 1.0f; 
     private float customTimer = 0f;
     private bool isEnlarged = false; 
     private int foodEatenCount = 0;
 
-    [Header("--- 굶주림 및 사망 타이머 (공복용) ---")]
     private float hungerTimer = 0f;
     public bool isFull = false;
 
-    [Header("--- 🚨 오염 사망 타이머 ---")]
     private float dirtyWaterTimer = 0f;
 
-    [Header("--- 🚨 [수정] 어항 벽 절대 범위 좌표 (월드 좌표 기준) ---")]
     public float minZ = -0.068f;
     public float maxZ= 0.485f;
     public float minY = 0.684f;
@@ -36,6 +32,10 @@ public class FishMovement : MonoBehaviour
     private bool isIdling = false; 
     private float bugCheckTimer = 0f;
     private bool isWaterCompletelyDirty = false;
+
+    public AudioClip eatSound;  
+    public AudioClip deathSound; 
+    private AudioSource audioSource;
 
     void Start()
     {
@@ -67,6 +67,8 @@ public class FishMovement : MonoBehaviour
         currentSpeedY = 0f;
         currentSpeedZ = 0f;
         directionTimer = 0f;
+
+        audioSource = GetComponent<AudioSource>();
     }
 
     void Update()
@@ -114,7 +116,7 @@ public class FishMovement : MonoBehaviour
             }
             else
             {
-                Destroy(gameObject);
+                TriggerDeathSoundAndDestroy();
                 return;
             }
         }
@@ -161,7 +163,8 @@ public class FishMovement : MonoBehaviour
                 }
                 else if (hungerTimer >= 10.0f)
                 {
-                    Destroy(gameObject); 
+                    TriggerDeathSoundAndDestroy();
+                    return;
                 }
             }
         }
@@ -211,7 +214,6 @@ public class FishMovement : MonoBehaviour
         }
     }
 
-
     void DecideNextAction()
     {
         isIdling = Random.Range(0, 2) == 0;
@@ -241,6 +243,12 @@ public class FishMovement : MonoBehaviour
         customTimer = 0f; 
         hungerTimer = 0f; 
 
+        if (audioSource != null && eatSound != null)
+        {
+            audioSource.clip = eatSound;
+            audioSource.Play();
+        }
+
         GameObject bug = GameObject.FindWithTag("Bug");
         bool isDirty = false;
         if (bug != null)
@@ -252,6 +260,15 @@ public class FishMovement : MonoBehaviour
         if (!isDirty) ResetToOriginalColor();
 
         ApplyScale();
+    }
+
+    void TriggerDeathSoundAndDestroy()
+    {
+        if (deathSound != null)
+        {
+            AudioSource.PlayClipAtPoint(deathSound, transform.position);
+        }
+        Destroy(gameObject);
     }
 
     void ChangeFishColorLerp(Color targetColor, float percent)

@@ -3,6 +3,8 @@ using UnityEngine;
 public class WaterBug : MonoBehaviour
 {
     private float lifeTimer = 0f;
+    
+    public AudioClip bugCatchSound; 
 
     void Update()
     {
@@ -17,6 +19,11 @@ public class WaterBug : MonoBehaviour
             {
                 if (hit.collider.gameObject == this.gameObject)
                 {
+                    if (bugCatchSound != null)
+                    {
+                        AudioSource.PlayClipAtPoint(bugCatchSound, transform.position);
+                    }
+
                     Destroy(gameObject);
                 }
             }

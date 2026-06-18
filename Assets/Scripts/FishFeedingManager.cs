@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -31,6 +32,13 @@ public class FishFeedingManager : MonoBehaviour
 
     private int[] fishCountByStage = new int[5];
 
+    public AudioClip fishAddSound; 
+    public AudioClip winSound;     
+    public AudioClip gameOverSound;
+
+    private AudioSource audioSource;
+    private bool isResultSoundPlayed = false; 
+
     void Start()
     {
         score = 0; 
@@ -38,13 +46,41 @@ public class FishFeedingManager : MonoBehaviour
         isGameOver = false; 
         isGameWin = false;
         finalFishCount = 0;
+        isResultSoundPlayed = false;
         nextSpawnTime = Random.Range(3.0f, 10.0f);
+
+        audioSource = GetComponent<AudioSource>();
+        
+        if (audioSource != null && audioSource.clip != null)
+        {
+            audioSource.loop = true;
+            audioSource.Play();
+        }
     }
 
     void Update()
     {
         if (isGameOver || isGameWin)
         {
+            if (!isResultSoundPlayed)
+            {
+                isResultSoundPlayed = true;
+
+                if (audioSource != null)
+                {
+                    audioSource.Stop();
+                }
+
+                if (isGameWin && winSound != null)
+                {
+                    AudioSource.PlayClipAtPoint(winSound, Camera.main.transform.position);
+                }
+                else if (isGameOver && gameOverSound != null)
+                {
+                    AudioSource.PlayClipAtPoint(gameOverSound, Camera.main.transform.position);
+                }
+            }
+
             if (Input.GetButtonDown("Jump"))
             {
                 SceneManager.LoadScene("AquaFarming-Room"); 
@@ -172,6 +208,12 @@ public class FishFeedingManager : MonoBehaviour
                 Vector3 spawnPos = new Vector3(tankCenterX, 0.7f, Random.Range(-0.1f, 0.5f));
                 Instantiate(fishPrefabs[randomIndex], spawnPos, Quaternion.identity);
                 
+                if (audioSource != null && fishAddSound != null)
+                {
+                    audioSource.clip = fishAddSound;
+                    audioSource.Play();
+                }
+
                 allFullTimer = 0f;
                 showAddButton = false;
             }
